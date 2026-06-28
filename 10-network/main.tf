@@ -3,32 +3,44 @@ provider "google" {
   region  = var.region
 }
 
+locals {
+  vpc_name    = coalesce(var.vpc_name, "vpc-${var.name_prefix}")
+  subnet_name = coalesce(var.subnet_name, "snet-gke-${var.name_prefix}")
+
+  internal_source_ranges = [
+    var.subnet_primary_cidr,
+    var.pods_range_cidr,
+    var.services_range_cidr,
+  ]
+}
+
 resource "google_compute_network" "vpc" {
-  name                    = "vpc-${var.name_prefix}"
+  name                    = local.vpc_name
   auto_create_subnetworks = false
+  routing_mode            = "REGIONAL"
 }
 
 resource "google_compute_subnetwork" "gke" {
-  name          = "snet-gke-${var.name_prefix}"
+  name          = local.subnet_name
   region        = var.region
   network       = google_compute_network.vpc.id
-  ip_cidr_range = "10.40.0.0/20"
+  ip_cidr_range = var.subnet_primary_cidr
 
   secondary_ip_range {
-    range_name    = "pods"
-    ip_cidr_range = "10.41.0.0/16"
+    range_name    = var.pods_range_name
+    ip_cidr_range = var.pods_range_cidr
   }
 
   secondary_ip_range {
-    range_name    = "services"
-    ip_cidr_range = "10.42.0.0/20"
+    range_name    = var.services_range_name
+    ip_cidr_range = var.services_range_cidr
   }
 
-  private_ip_google_access = true
+  private_ip_google_access = var.private_ip_google_access
 }
 
 resource "google_compute_firewall" "allow_internal" {
-  name    = "fw-${var.name_prefix}-allow-internal"
+  name    = "fw-${local.vpc_name}-allow-internal"
   network = google_compute_network.vpc.name
 
   allow {
@@ -45,5 +57,5 @@ resource "google_compute_firewall" "allow_internal" {
     protocol = "icmp"
   }
 
-  source_ranges = ["10.40.0.0/20", "10.41.0.0/16", "10.42.0.0/20"]
+  source_ranges = local.internal_source_ranges
 }
