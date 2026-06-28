@@ -1,0 +1,24 @@
+# Terraform
+**/.terraform/*
+**/.terraform.lock.hcl
+**/terraform.tfstate
+**/terraform.tfstate.*
+**/tfplan
+**/*.tfplan
+**/crash.log
+**/override.tf
+**/*_override.tf
+
+# Local secrets
+**/sonmap.auto.tfvars
+**/*.auto.tfvars
+**/terraform.tfvars
+**/credentials*.json
+**/*-key.json
+**/kubeconfig
+**/.kube/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/

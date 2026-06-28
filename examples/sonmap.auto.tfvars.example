@@ -1,0 +1,6 @@
+project_id = "<GCP_PROJECT_ID>"
+region     = "asia-northeast3"
+
+# 30-gke-rbac example
+kube_config_context    = "gke_<PROJECT_ID>_asia-northeast3_gke-ai-dev-krc"
+developer_group_email = "sg-gcp-gke-dev-developers@example.com"
