@@ -12,6 +12,7 @@ Azure `Entra ID + AKS` 실습 레포를 GCP 전용 구조로 변환한 Terraform
 - GKE용 VPC, Subnet, Pod/Service secondary range 구성
 - GKE Standard Cluster, Node Pool, Artifact Registry 구성
 - Kubernetes Namespace, Role, RoleBinding 구성
+- Excel 1장 기반 설계값을 CSV/tfvars로 변환하여 Terraform 적용
 
 핵심 원칙은 다음입니다.
 
@@ -31,6 +32,13 @@ flowchart TB
         GM["Group Memberships"]
         IAM["Google Cloud IAM\nProject-level roles"]
         U --> GM --> G --> IAM
+    end
+
+    subgraph EXCEL["Excel One Sheet Design"]
+        XLS["GCP_GKE_Design sheet"]
+        CSV["CSV UTF-8 export"]
+        GEN["generate_tfvars_from_one_sheet_csv.py"]
+        XLS --> CSV --> GEN
     end
 
     subgraph NET["10-network\nGCP Network"]
@@ -65,6 +73,10 @@ flowchart TB
         NS3 --> RB
     end
 
+    EXCEL --> ID
+    EXCEL --> NET
+    EXCEL --> GKE
+    EXCEL --> K8S
     ID -. "Google Group email" .-> GKE
     IAM -. "container.* roles" .-> CL
     NET -. "VPC/Subnet" .-> CL
@@ -98,11 +110,52 @@ GCP-GKS-small_company/
 │   └── GKE / Node Pool / Artifact Registry
 ├── 30-gke-rbac/
 │   └── Namespace / Role / RoleBinding
+├── design/
+│   └── ONE_SHEET_EXCEL_GUIDE.md
+├── scripts/
+│   └── generate_tfvars_from_one_sheet_csv.py
 ├── CONVERSION_MAP.md
 └── README.md
 ```
 
-## 5. 배포 순서
+## 5. Excel 1장 설계 적용 흐름
+
+Excel 파일의 `GCP_GKE_Design` 한 시트에 모든 속성을 넣습니다.
+
+주요 컬럼:
+
+| Column | Purpose |
+|---|---|
+| `Section` | 적용 단계 |
+| `Resource Type` | 리소스 유형 |
+| `Enabled` | 적용 여부 |
+| `Apply Order` | 적용 순서 |
+| `Resource Key` | 리소스 고유 키 |
+| `Depends On` | 선행 리소스 |
+| `Project ID` | GCP 프로젝트 ID |
+| `Region` | GCP Region |
+| `Generated File` | 생성 대상 tfvars/csv |
+
+사용 절차:
+
+```bash
+# 1. Excel 수정 후 CSV UTF-8로 저장
+# 예: gcp_gke_small_company_one_sheet_design.csv
+
+# 2. CSV에서 tfvars 생성
+python3 scripts/generate_tfvars_from_one_sheet_csv.py \
+  --input gcp_gke_small_company_one_sheet_design.csv \
+  --out-dir _generated
+
+# 3. 생성된 tfvars를 각 Terraform stack에 복사
+cp _generated/10-network/sonmap.auto.tfvars 10-network/sonmap.auto.tfvars
+cp _generated/20-gke/sonmap.auto.tfvars 20-gke/sonmap.auto.tfvars
+cp _generated/30-gke-rbac/sonmap.auto.tfvars 30-gke-rbac/sonmap.auto.tfvars
+```
+
+자세한 설명은 `design/ONE_SHEET_EXCEL_GUIDE.md`를 확인하세요.
+
+## 6. 배포 순서
 
 ```bash
 cd 00-google-identity
@@ -126,7 +179,7 @@ terraform plan
 terraform apply
 ```
 
-## 6. 사전 준비
+## 7. 사전 준비
 
 ```bash
 gcloud auth login
@@ -141,7 +194,7 @@ gcloud services enable \
 
 Google Workspace / Cloud Identity 그룹을 Terraform으로 관리하려면 Google Workspace Admin SDK 권한과 적절한 위임 설정이 필요합니다. 일반 GCP 프로젝트 IAM만 테스트하려면 `00-google-identity` 단계는 CSV 설계/수동 그룹 생성으로 대체할 수 있습니다.
 
-## 7. 운영 보강 항목
+## 8. 운영 보강 항목
 
 - Terraform remote backend: GCS bucket 사용
 - GKE private cluster 검토
