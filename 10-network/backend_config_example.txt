@@ -1,0 +1,3 @@
+Set the GCS state storage name and stack path here before running terraform init.
+Example state storage name: tfstate-PROJECT-krc
+Example stack path: gcp-gks-small-company/10-network
